@@ -14,29 +14,29 @@ function addBucket <Item> ({ buckets, parts, item }: {
 }): Buckets<Item> {
   const limit = parts.length - 1
 
-  let adding = buckets
-  for (let i = 0; i < limit + 1; ++i) {
-    const partKey = parts[i]
-    const value = adding[partKey]
+  parts.reduce((adding, part, index) => {
+    const value = adding[part]
     if (Array.isArray(value)) {
       value.push(item)
       return buckets
     }
     if (value == null) {
-      if (i === limit) {
-        adding[partKey] = [item]
+      if (index === limit) {
+        adding[part] = [item]
       } else {
-        adding[partKey] = {}
+        adding[part] = {}
       }
     }
-    const newValue = adding[partKey]
+    const newValue = adding[part]
     if (!Array.isArray(newValue)) {
       adding = newValue
     }
-  }
+
+    return adding
+  }, buckets)
 
   return buckets
-};
+}
 
 function bucket <Item> ({ items, bucketKeys }: {
   items: Item[]
