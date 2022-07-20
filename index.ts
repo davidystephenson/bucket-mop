@@ -1,32 +1,63 @@
 import items from './items.json'
+console.log('items test:', items)
+
+type BucketValue <Item> = Item[] | Buckets<Item>
 
 interface Buckets <Item> {
-  [key: string]: Item[]//  | Buckets<Item>
+  [key: string]: BucketValue<Item>
 }
 
-function bucket <Item> ({ items, bucketKey }: {
-  items: Item[]
-  bucketKey: keyof Item
+function addBucket <Item> ({ buckets, parts, item }: {
+  buckets: Buckets<Item>
+  parts: string[]
+  item: Item
 }): Buckets<Item> {
-  const buckets = items.reduce<Record<string, Item[]>>((buckets, item) => {
-    const bucketValue = String(item[bucketKey])
+  const limit = parts.length - 1
 
-    if (buckets[bucketValue] != null) {
-      buckets[bucketValue].push(item)
-    } else {
-      buckets[bucketValue] = [item]
+  let adding = buckets
+  for (let i = 0; i < limit + 1; ++i) {
+    const partKey = parts[i]
+    const value = adding[partKey]
+    if (Array.isArray(value)) {
+      value.push(item)
+      return buckets
     }
-
-    return buckets
-  }, {})
+    if (value == null) {
+      if (i === limit) {
+        adding[partKey] = [item]
+      } else {
+        adding[partKey] = {}
+      }
+    }
+    const newValue = adding[partKey]
+    if (!Array.isArray(newValue)) {
+      adding = newValue
+    }
+  }
 
   return buckets
+};
+
+function bucket <Item> ({ items, bucketKeys }: {
+  items: Item[]
+  bucketKeys: Array<keyof Item>
+}): Buckets<Item> {
+  const emptyBuckets = items.reduce<Buckets<Item>>((buckets, item) => {
+    const bucketValues = bucketKeys.map(key => String(item[key]))
+
+    const added = addBucket({ buckets, parts: bucketValues, item })
+
+    return added
+  }, {})
+
+  return emptyBuckets
 }
 
-const buckets = bucket({ items, bucketKey: 'b' })
+const buckets = bucket({ items, bucketKeys: ['city', 'source'] })
 const string = JSON.stringify(buckets, null, 2)
 console.log('buckets test:', string)
 
+/*
 type Reducer <Item, Mopped> = ({ bucket, mopKey }: {
   mopped: Mopped
   item: Item

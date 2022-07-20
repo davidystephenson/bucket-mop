@@ -4,42 +4,98 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const items_json_1 = __importDefault(require("./items.json"));
-function bucket({ items, bucketKey }) {
-    const buckets = items.reduce((buckets, item) => {
-        const bucketValue = String(item[bucketKey]);
-        if (buckets[bucketValue] != null) {
-            buckets[bucketValue].push(item);
+console.log('items test:', items_json_1.default);
+function addBucket({ buckets, parts, item }) {
+    const limit = parts.length - 1;
+    let adding = buckets;
+    for (let i = 0; i < limit + 1; ++i) {
+        const partKey = parts[i];
+        const value = adding[partKey];
+        if (Array.isArray(value)) {
+            value.push(item);
+            return buckets;
         }
-        else {
-            buckets[bucketValue] = [item];
+        if (value == null) {
+            if (i === limit) {
+                adding[partKey] = [item];
+            }
+            else {
+                adding[partKey] = {};
+            }
         }
-        return buckets;
-    }, {});
+        const newValue = adding[partKey];
+        if (!Array.isArray(newValue)) {
+            adding = newValue;
+        }
+    }
+    // const addingKey = parts[limit]
+    // const addingValue = adding[addingKey]
+    // if (addingValue == null) {
+    //   adding[addingKey] = [item]
+    // } else if (Array.isArray(addingValue)) {
+    //   addingValue.push(item)
+    // }
     return buckets;
 }
-const buckets = bucket({ items: items_json_1.default, bucketKey: 'b' });
+;
+function bucket({ items, bucketKeys }) {
+    const emptyBuckets = items.reduce((buckets, item) => {
+        const bucketValues = bucketKeys.map(key => String(item[key]));
+        const added = addBucket({ buckets, parts: bucketValues, item });
+        return added;
+    }, {});
+    return emptyBuckets;
+}
+const buckets = bucket({ items: items_json_1.default, bucketKeys: ['city', 'source'] });
 const string = JSON.stringify(buckets, null, 2);
 console.log('buckets test:', string);
-function mop({ bucket, reducer, mopKey, initial }) {
-    const mopped = bucket.reduce((mopped, item) => {
-        const moppedUp = reducer({ mopped, item, mopKey, bucket });
-        return moppedUp;
-    }, initial);
-    return mopped;
+/*
+type Reducer <Item, Mopped> = ({ bucket, mopKey }: {
+  mopped: Mopped
+  item: Item
+  mopKey?: keyof Item
+  bucket: Item[]
+}) => Mopped
+
+function mop <Item, Mopped> ({ bucket, reducer, mopKey, initial }: {
+  bucket: Item[]
+  reducer: Reducer<Item, Mopped>
+  initial: Mopped
+  mopKey?: keyof Item
+}): Mopped {
+  const mopped = bucket.reduce((mopped, item) => {
+    const moppedUp = reducer({ mopped, item, mopKey, bucket })
+
+    return moppedUp
+  }, initial)
+
+  return mopped
 }
-function totalReducer({ mopped, item, mopKey }) {
-    if (mopKey == null)
-        throw new Error('totalReducer requires a mopKey');
-    const value = item[mopKey];
-    const number = Number(value);
-    return mopped + number;
+
+function totalReducer <Item> ({ mopped, item, mopKey }: {
+  mopped: number
+  item: Item
+  mopKey?: keyof Item
+}): number {
+  if (mopKey == null) throw new Error('totalReducer requires a mopKey')
+
+  const value = item[mopKey]
+  const number = Number(value)
+
+  return mopped + number
 }
-function totalMop({ bucket, totalKey }) {
-    return mop({ bucket, reducer: totalReducer, mopKey: totalKey, initial: 0 });
+
+function totalMop <Item> ({ bucket, totalKey }: {
+  bucket: Item[]
+  totalKey: keyof Item
+}): number {
+  return mop({ bucket, reducer: totalReducer, mopKey: totalKey, initial: 0 })
 }
-const bucket1 = buckets['1'];
-const totaledB = totalMop({ bucket: bucket1, totalKey: 'b' });
-console.log('totaledB test:', totaledB);
+
+const bucket1 = buckets['1']
+const totaledB = totalMop({ bucket: bucket1, totalKey: 'b' })
+console.log('totaledB test:', totaledB)
+
 /*
 function mop2 <Item, Mopped> ({ buckets, mopCallback, mopKey }: {
   buckets: Buckets<Item>
@@ -84,3 +140,4 @@ function bucketMop <Item, Schema> ({ buckets }: {
     }
 }
 */
+//# sourceMappingURL=index.js.map
