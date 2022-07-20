@@ -1,20 +1,19 @@
 import items from './items.json'
-console.log('items test:', items)
 
-type BucketValue <Item> = Item[] | Buckets<Item>
+type BucketValue <Item> = { [key: string]: BucketValue<Item> } | Item[]
 
 interface Buckets <Item> {
   [key: string]: BucketValue<Item>
 }
 
-function addBucket <Item> ({ buckets, parts, item }: {
+function addBucket <Item> ({ buckets, path, item }: {
   buckets: Buckets<Item>
-  parts: string[]
+  path: string[]
   item: Item
 }): Buckets<Item> {
-  const limit = parts.length - 1
+  const limit = path.length - 1
 
-  parts.reduce((adding, part, index) => {
+  path.reduce((adding, part, index) => {
     const value = adding[part]
     if (Array.isArray(value)) {
       value.push(item)
@@ -38,14 +37,14 @@ function addBucket <Item> ({ buckets, parts, item }: {
   return buckets
 }
 
-function bucket <Item> ({ items, bucketKeys }: {
+function bucket <Item> ({ items, path }: {
   items: Item[]
-  bucketKeys: Array<keyof Item>
+  path: Array<keyof Item>
 }): Buckets<Item> {
   const emptyBuckets = items.reduce<Buckets<Item>>((buckets, item) => {
-    const bucketValues = bucketKeys.map(key => String(item[key]))
+    const bucketValues = path.map(key => String(item[key]))
 
-    const added = addBucket({ buckets, parts: bucketValues, item })
+    const added = addBucket({ buckets, path: bucketValues, item })
 
     return added
   }, {})
@@ -53,11 +52,34 @@ function bucket <Item> ({ items, bucketKeys }: {
   return emptyBuckets
 }
 
-const buckets = bucket({ items, bucketKeys: ['city', 'source'] })
+const buckets = bucket({ items, path: ['city', 'source'] })
+
+const path = ['Amsterdam', 'email']
+let email: BucketValue<typeof items[number]> = buckets
+path.forEach(part => {
+  if (Array.isArray(email)) return
+
+  email = email[part]
+})
+console.log('email test:', email)
+
+/*
+
+const x = path.reduce<typeof items>((buckets, part) => {
+  const isArray = Array.isArray(buckets)
+  if (isArray) {
+    return buckets
+  }
+
+  const value = buckets[part]
+
+  return value
+}, buckets)
 const string = JSON.stringify(buckets, null, 2)
 console.log('buckets test:', string)
 
 /*
+
 type Reducer <Item, Mopped> = ({ bucket, mopKey }: {
   mopped: Mopped
   item: Item
@@ -100,7 +122,7 @@ function totalMop <Item> ({ bucket, totalKey }: {
   return mop({ bucket, reducer: totalReducer, mopKey: totalKey, initial: 0 })
 }
 
-const bucket1 = buckets['1']
+const bucket1 = buckets.Amsterdam.email
 const totaledB = totalMop({ bucket: bucket1, totalKey: 'b' })
 console.log('totaledB test:', totaledB)
 

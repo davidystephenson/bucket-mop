@@ -4,10 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const items_json_1 = __importDefault(require("./items.json"));
-console.log('items test:', items_json_1.default);
-function addBucket({ buckets, parts, item }) {
-    const limit = parts.length - 1;
-    parts.reduce((adding, part, index) => {
+function addBucket({ buckets, path, item }) {
+    const limit = path.length - 1;
+    path.reduce((adding, part, index) => {
         const value = adding[part];
         if (Array.isArray(value)) {
             value.push(item);
@@ -29,18 +28,41 @@ function addBucket({ buckets, parts, item }) {
     }, buckets);
     return buckets;
 }
-function bucket({ items, bucketKeys }) {
+function bucket({ items, path }) {
     const emptyBuckets = items.reduce((buckets, item) => {
-        const bucketValues = bucketKeys.map(key => String(item[key]));
-        const added = addBucket({ buckets, parts: bucketValues, item });
+        const bucketValues = path.map(key => String(item[key]));
+        const added = addBucket({ buckets, path: bucketValues, item });
         return added;
     }, {});
     return emptyBuckets;
 }
-const buckets = bucket({ items: items_json_1.default, bucketKeys: ['city', 'source'] });
-const string = JSON.stringify(buckets, null, 2);
-console.log('buckets test:', string);
+const buckets = bucket({ items: items_json_1.default, path: ['city', 'source'] });
+const path = ['Amsterdam', 'email'];
+let email = buckets;
+path.forEach(part => {
+    if (Array.isArray(email))
+        return;
+    console.log('middle test', email);
+    email = email[part];
+});
+console.log('email test:', email);
 /*
+
+const x = path.reduce<typeof items>((buckets, part) => {
+  const isArray = Array.isArray(buckets)
+  if (isArray) {
+    return buckets
+  }
+
+  const value = buckets[part]
+
+  return value
+}, buckets)
+const string = JSON.stringify(buckets, null, 2)
+console.log('buckets test:', string)
+
+/*
+
 type Reducer <Item, Mopped> = ({ bucket, mopKey }: {
   mopped: Mopped
   item: Item
@@ -83,7 +105,7 @@ function totalMop <Item> ({ bucket, totalKey }: {
   return mop({ bucket, reducer: totalReducer, mopKey: totalKey, initial: 0 })
 }
 
-const bucket1 = buckets['1']
+const bucket1 = buckets.Amsterdam.email
 const totaledB = totalMop({ bucket: bucket1, totalKey: 'b' })
 console.log('totaledB test:', totaledB)
 
