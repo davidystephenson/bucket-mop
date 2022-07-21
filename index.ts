@@ -58,8 +58,8 @@ function bucket <Item> ({ items, path }: {
   return emptyBuckets
 }
 
-const itemBuckets = bucket({ items, path: ['city', 'source'] })
-console.log('itemBuckets:', JSON.stringify(itemBuckets, null, 2))
+const citySourceBuckets = bucket({ items, path: ['city', 'source'] })
+console.log('citySourceBuckets:', JSON.stringify(citySourceBuckets, null, 2))
 
 function getBucket <Item> ({ buckets, path }: {
   buckets: Buckets<Item>
@@ -76,7 +76,7 @@ function getBucket <Item> ({ buckets, path }: {
 
   throw new Error('Bucket path not found')
 }
-const amsterdamEmail = getBucket({ buckets: itemBuckets, path: ['Amsterdam', 'email'] })
+const amsterdamEmail = getBucket({ buckets: citySourceBuckets, path: ['Amsterdam', 'email'] })
 console.log('amsterdamEmail test:', amsterdamEmail)
 
 type Mopper <Item, Mopped> = ({ bucket, mopKey }: {
@@ -86,22 +86,7 @@ type Mopper <Item, Mopped> = ({ bucket, mopKey }: {
   bucket: Item[]
 }) => Mopped
 
-function mopBucket <Item, Mopped> ({ bucket, mopper, mopKey, initial }: {
-  bucket: Item[]
-  mopper: Mopper<Item, Mopped>
-  initial: Mopped
-  mopKey?: keyof Item
-}): Mopped {
-  const mopped = bucket.reduce((mopped, item) => {
-    const moppedUp = mopper({ mopped, item, mopKey, bucket })
-
-    return moppedUp
-  }, initial)
-
-  return mopped
-}
-
-function totalReducer <Item> ({ mopped, item, mopKey }: {
+function totalMopper <Item> ({ mopped, item, mopKey }: {
   mopped: number
   item: Item
   mopKey?: keyof Item
@@ -114,30 +99,60 @@ function totalReducer <Item> ({ mopped, item, mopKey }: {
   return mopped + number
 }
 
+function averageReducer <Item> ({ mopped, item, mopKey, bucket }: {
+  mopped: number
+  item: Item
+  mopKey?: keyof Item
+  bucket: Item[]
+}): number {
+  if (mopKey == null) throw new Error('totalReducer requires a mopKey')
+
+  const value = item[mopKey]
+  const number = Number(value)
+  const quotient = number / bucket.length
+
+  return mopped + quotient
+}
+
+function mopBucket <Item, Mopped> ({ bucket, mopper, mopKey, initial }: {
+  bucket: Item[]
+  mopper: Mopper<Item, Mopped>
+  initial: Mopped
+  mopKey?: keyof Item
+}): Mopped {
+  const mopped = bucket.reduce((mopped, item) => {
+    const reduced = mopper({ mopped, item, mopKey, bucket })
+
+    return reduced
+  }, initial)
+
+  return mopped
+}
+
 function mopTotal <Item> ({ bucket, totalKey }: {
   bucket: Item[]
   totalKey: keyof Item
 }): number {
-  return mopBucket({ bucket, mopper: totalReducer, mopKey: totalKey, initial: 0 })
+  return mopBucket({ bucket, mopper: totalMopper, mopKey: totalKey, initial: 0 })
 }
 
 const totalEmailPrice = mopTotal({ bucket: amsterdamEmail, totalKey: 'price' })
 console.log('totalEmailPrice test:', totalEmailPrice)
 
-function mopBuckets <Item, Mopped> ({ buckets, reducer, initial, mopKey }: {
+function mopBuckets <Item, Mopped> ({ buckets, mopper, initial, mopKey }: {
   buckets: Buckets<Item>
-  reducer: Mopper<Item, Mopped>
+  mopper: Mopper<Item, Mopped>
   mopKey: keyof Item
   initial: Mopped
 }): MoppedBuckets<Mopped> {
   const mopped: MoppedBuckets<Mopped> = {}
   Object.entries(buckets).forEach(([bucketKey, bucketOrBuckets]) => {
     if (Array.isArray(bucketOrBuckets)) {
-      const moppedBucket = mopBucket({ bucket: bucketOrBuckets, mopper: reducer, mopKey, initial })
+      const moppedBucket = mopBucket({ bucket: bucketOrBuckets, mopper: mopper, mopKey, initial })
 
       mopped[bucketKey] = moppedBucket
     } else {
-      const moppedBuckets = mopBuckets({ buckets: bucketOrBuckets, reducer, initial, mopKey })
+      const moppedBuckets = mopBuckets({ buckets: bucketOrBuckets, mopper: mopper, initial, mopKey })
 
       mopped[bucketKey] = moppedBuckets
     }
@@ -146,5 +161,35 @@ function mopBuckets <Item, Mopped> ({ buckets, reducer, initial, mopKey }: {
   return mopped
 }
 
-const bucketTotals = mopBuckets({ buckets: itemBuckets, reducer: totalReducer, mopKey: 'price', initial: 0 })
-console.log('bucketTotals test:', bucketTotals)
+const citySourcePriceTotals = mopBuckets({ buckets: citySourceBuckets, mopper: totalMopper, mopKey: 'price', initial: 0 })
+console.log('citySourcePriceTotals test:', citySourcePriceTotals)
+
+function bucketMop <Item, Mopped> ({ items, bucketPath, reducer, initial, mopKey }: {
+  items: Item[]
+  bucketPath: Array<keyof Item>
+  reducer: Mopper<Item, Mopped>
+  initial: Mopped
+  mopKey: keyof Item
+}): MoppedBuckets<Mopped> {
+  const buckets = bucket({ items, path: bucketPath })
+  console.log('buckets test:', JSON.stringify(buckets, null, 2))
+
+  return mopBuckets({ buckets, mopper: reducer, initial, mopKey })
+}
+
+function bucketMopTotal <Item> ({ items, bucketPath, totalKey }: {
+  items: Item[]
+  bucketPath: Array<keyof Item>
+  totalKey: keyof Item
+}): MoppedBuckets<number> {
+  return bucketMop({ items, bucketPath, reducer: totalMopper, initial: 0, mopKey: totalKey })
+}
+
+const quantityTotals = bucketMop({ items, bucketPath: ['source', 'city', 'price'], reducer: totalMopper, initial: 0, mopKey: 'quantity' })
+console.log('quantityTotals test:', quantityTotals)
+
+const cityTotals = bucketMopTotal({ items, bucketPath: ['price', 'city'], totalKey: 'quantity' })
+console.log('cityTotals test:', cityTotals)
+
+const cityAverages = bucketMop({ items, bucketPath: ['price', 'city'], reducer: averageReducer, initial: 0, mopKey: 'quantity' })
+console.log('cityAverages test:', cityAverages)
