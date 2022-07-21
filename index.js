@@ -37,14 +37,16 @@ function bucket({ items, path }) {
     return emptyBuckets;
 }
 const buckets = bucket({ items: items_json_1.default, path: ['city', 'source'] });
-const path = ['Amsterdam', 'email'];
-let email = buckets;
-path.forEach(part => {
-    if (Array.isArray(email))
-        return;
-    console.log('middle test', email);
-    email = email[part];
-});
+function getBucket({ buckets, path }) {
+    let bucket = buckets;
+    path.forEach(part => {
+        if (Array.isArray(bucket))
+            return bucket;
+        bucket = bucket[part];
+    });
+    return bucket;
+}
+const email = getBucket({ buckets, path: ['Amsterdam', 'email'] });
 console.log('email test:', email);
 /*
 

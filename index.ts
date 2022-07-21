@@ -54,17 +54,23 @@ function bucket <Item> ({ items, path }: {
 
 const buckets = bucket({ items, path: ['city', 'source'] })
 
-const path = ['Amsterdam', 'email']
-let email: BucketValue<typeof items[number]> = buckets
-path.forEach(part => {
-  if (Array.isArray(email)) return
+function getBucket <Item> ({ buckets, path }: {
+  buckets: Buckets<Item>
+  path: string[]
+}): BucketValue<Item> {
+  let bucket: BucketValue<Item> = buckets
+  path.forEach(part => {
+    if (Array.isArray(bucket)) return bucket
 
-  email = email[part]
-})
+    bucket = bucket[part]
+  })
+
+  return bucket
+}
+const email = getBucket({ buckets, path: ['Amsterdam', 'email'] })
 console.log('email test:', email)
 
 /*
-
 const x = path.reduce<typeof items>((buckets, part) => {
   const isArray = Array.isArray(buckets)
   if (isArray) {
