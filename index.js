@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const items_json_1 = __importDefault(require("./items.json"));
+console.log('items test:', items_json_1.default);
 function addBucket({ buckets, path, item }) {
     const limit = path.length - 1;
     path.reduce((adding, part, index) => {
@@ -36,7 +37,8 @@ function bucket({ items, path }) {
     }, {});
     return emptyBuckets;
 }
-const buckets = bucket({ items: items_json_1.default, path: ['city', 'source'] });
+const itemBuckets = bucket({ items: items_json_1.default, path: ['city', 'source'] });
+console.log('itemBuckets:', JSON.stringify(itemBuckets, null, 2));
 function getBucket({ buckets, path }) {
     let bucket = buckets;
     path.forEach(part => {
@@ -44,115 +46,45 @@ function getBucket({ buckets, path }) {
             return bucket;
         bucket = bucket[part];
     });
-    return bucket;
+    if (Array.isArray(bucket))
+        return bucket;
+    throw new Error('Bucket path not found');
 }
-const email = getBucket({ buckets, path: ['Amsterdam', 'email'] });
-console.log('email test:', email);
-/*
-
-const x = path.reduce<typeof items>((buckets, part) => {
-  const isArray = Array.isArray(buckets)
-  if (isArray) {
-    return buckets
-  }
-
-  const value = buckets[part]
-
-  return value
-}, buckets)
-const string = JSON.stringify(buckets, null, 2)
-console.log('buckets test:', string)
-
-/*
-
-type Reducer <Item, Mopped> = ({ bucket, mopKey }: {
-  mopped: Mopped
-  item: Item
-  mopKey?: keyof Item
-  bucket: Item[]
-}) => Mopped
-
-function mop <Item, Mopped> ({ bucket, reducer, mopKey, initial }: {
-  bucket: Item[]
-  reducer: Reducer<Item, Mopped>
-  initial: Mopped
-  mopKey?: keyof Item
-}): Mopped {
-  const mopped = bucket.reduce((mopped, item) => {
-    const moppedUp = reducer({ mopped, item, mopKey, bucket })
-
-    return moppedUp
-  }, initial)
-
-  return mopped
+const amsterdamEmail = getBucket({ buckets: itemBuckets, path: ['Amsterdam', 'email'] });
+console.log('amsterdamEmail test:', amsterdamEmail);
+function mopBucket({ bucket, mopper, mopKey, initial }) {
+    const mopped = bucket.reduce((mopped, item) => {
+        const moppedUp = mopper({ mopped, item, mopKey, bucket });
+        return moppedUp;
+    }, initial);
+    return mopped;
 }
-
-function totalReducer <Item> ({ mopped, item, mopKey }: {
-  mopped: number
-  item: Item
-  mopKey?: keyof Item
-}): number {
-  if (mopKey == null) throw new Error('totalReducer requires a mopKey')
-
-  const value = item[mopKey]
-  const number = Number(value)
-
-  return mopped + number
+function totalReducer({ mopped, item, mopKey }) {
+    if (mopKey == null)
+        throw new Error('totalReducer requires a mopKey');
+    const value = item[mopKey];
+    const number = Number(value);
+    return mopped + number;
 }
-
-function totalMop <Item> ({ bucket, totalKey }: {
-  bucket: Item[]
-  totalKey: keyof Item
-}): number {
-  return mop({ bucket, reducer: totalReducer, mopKey: totalKey, initial: 0 })
+function mopTotal({ bucket, totalKey }) {
+    return mopBucket({ bucket, mopper: totalReducer, mopKey: totalKey, initial: 0 });
 }
-
-const bucket1 = buckets.Amsterdam.email
-const totaledB = totalMop({ bucket: bucket1, totalKey: 'b' })
-console.log('totaledB test:', totaledB)
-
-/*
-function mop2 <Item, Mopped> ({ buckets, mopCallback, mopKey }: {
-  buckets: Buckets<Item>
-  mopCallback: ({ bucket, mopKey }: { bucket: Item[], mopKey?: keyof Item }) => Mopped
-  mopKey?: keyof Item
-}): Record<string, Mopped> {
-  const entries = Object.entries(buckets)
-
-  const mopped = entries.reduce((mopped, [bucketKey, bucket]) => {
-    const moppedValue = mopCallback({ bucket, mopKey })
-    mopped[bucketKey] = moppedValue
-
-    return mopped
-  }, {})
-
-  return mopped
-}
-
-function totalMop2 <Item> ({ totalKey, buckets }: {
-  totalKey: string
-  buckets: Record<string, Item[]>
-}): Record<string, number> {
-  return mop({ buckets, mopCallback: totalBucket, mopKey: totalKey })
-}
-
-const totaled = totalMop({ totalKey: 'a', buckets })
-console.log('totaled test:', totaled)
-
-function bucketMop <Item, Schema> ({ buckets }: {
-  buckets: string[]
-}): Buckets<Item> {
-  const bucketed = buckets.reduce<Record<string, Item[]>>((bucketed, bucketKey) => {
-  const schemaEntries = Object.entries(schema)
-  const result = schemaEntries.reduce((result, [schemaKey, schemaValue]) => {
-    if (typeof schemaValue === 'string') {
-      switch (schemaValue) {
-        case 'items': {
-          return data
+const totalEmailPrice = mopTotal({ bucket: amsterdamEmail, totalKey: 'price' });
+console.log('totalEmailPrice test:', totalEmailPrice);
+function mopBuckets({ buckets, reducer, initial, mopKey }) {
+    const mopped = {};
+    Object.entries(buckets).forEach(([bucketKey, bucketOrBuckets]) => {
+        if (Array.isArray(bucketOrBuckets)) {
+            const moppedBucket = mopBucket({ bucket: bucketOrBuckets, mopper: reducer, mopKey, initial });
+            mopped[bucketKey] = moppedBucket;
         }
-        case 'total': {
+        else {
+            const moppedBuckets = mopBuckets({ buckets: bucketOrBuckets, reducer, initial, mopKey });
+            mopped[bucketKey] = moppedBuckets;
         }
-    }
+    });
+    return mopped;
 }
-*/
+const bucketTotals = mopBuckets({ buckets: itemBuckets, reducer: totalReducer, mopKey: 'price', initial: 0 });
+console.log('bucketTotals test:', bucketTotals);
 //# sourceMappingURL=index.js.map

@@ -1,9 +1,15 @@
 import items from './items.json'
+console.log('items test:', items)
 
-type BucketValue <Item> = { [key: string]: BucketValue<Item> } | Item[]
+type BucketOrBuckets <Item> = Buckets<Item> | Item[]
 
 interface Buckets <Item> {
-  [key: string]: BucketValue<Item>
+  [key: string]: BucketOrBuckets<Item>
+}
+
+type MoppedBucketOrBuckets <Mopped> = MoppedBuckets<Mopped> | Mopped
+interface MoppedBuckets <Mopped> {
+  [key: string]: MoppedBucketOrBuckets<Mopped>
 }
 
 function addBucket <Item> ({ buckets, path, item }: {
@@ -52,55 +58,42 @@ function bucket <Item> ({ items, path }: {
   return emptyBuckets
 }
 
-const buckets = bucket({ items, path: ['city', 'source'] })
+const itemBuckets = bucket({ items, path: ['city', 'source'] })
+console.log('itemBuckets:', JSON.stringify(itemBuckets, null, 2))
 
 function getBucket <Item> ({ buckets, path }: {
   buckets: Buckets<Item>
   path: string[]
-}): BucketValue<Item> {
-  let bucket: BucketValue<Item> = buckets
+}): Item[] {
+  let bucket: BucketOrBuckets<Item> = buckets
   path.forEach(part => {
     if (Array.isArray(bucket)) return bucket
 
     bucket = bucket[part]
   })
 
-  return bucket
+  if (Array.isArray(bucket)) return bucket
+
+  throw new Error('Bucket path not found')
 }
-const email = getBucket({ buckets, path: ['Amsterdam', 'email'] })
-console.log('email test:', email)
+const amsterdamEmail = getBucket({ buckets: itemBuckets, path: ['Amsterdam', 'email'] })
+console.log('amsterdamEmail test:', amsterdamEmail)
 
-/*
-const x = path.reduce<typeof items>((buckets, part) => {
-  const isArray = Array.isArray(buckets)
-  if (isArray) {
-    return buckets
-  }
-
-  const value = buckets[part]
-
-  return value
-}, buckets)
-const string = JSON.stringify(buckets, null, 2)
-console.log('buckets test:', string)
-
-/*
-
-type Reducer <Item, Mopped> = ({ bucket, mopKey }: {
+type Mopper <Item, Mopped> = ({ bucket, mopKey }: {
   mopped: Mopped
   item: Item
   mopKey?: keyof Item
   bucket: Item[]
 }) => Mopped
 
-function mop <Item, Mopped> ({ bucket, reducer, mopKey, initial }: {
+function mopBucket <Item, Mopped> ({ bucket, mopper, mopKey, initial }: {
   bucket: Item[]
-  reducer: Reducer<Item, Mopped>
+  mopper: Mopper<Item, Mopped>
   initial: Mopped
   mopKey?: keyof Item
 }): Mopped {
   const mopped = bucket.reduce((mopped, item) => {
-    const moppedUp = reducer({ mopped, item, mopKey, bucket })
+    const moppedUp = mopper({ mopped, item, mopKey, bucket })
 
     return moppedUp
   }, initial)
@@ -121,58 +114,37 @@ function totalReducer <Item> ({ mopped, item, mopKey }: {
   return mopped + number
 }
 
-function totalMop <Item> ({ bucket, totalKey }: {
+function mopTotal <Item> ({ bucket, totalKey }: {
   bucket: Item[]
   totalKey: keyof Item
 }): number {
-  return mop({ bucket, reducer: totalReducer, mopKey: totalKey, initial: 0 })
+  return mopBucket({ bucket, mopper: totalReducer, mopKey: totalKey, initial: 0 })
 }
 
-const bucket1 = buckets.Amsterdam.email
-const totaledB = totalMop({ bucket: bucket1, totalKey: 'b' })
-console.log('totaledB test:', totaledB)
+const totalEmailPrice = mopTotal({ bucket: amsterdamEmail, totalKey: 'price' })
+console.log('totalEmailPrice test:', totalEmailPrice)
 
-/*
-function mop2 <Item, Mopped> ({ buckets, mopCallback, mopKey }: {
+function mopBuckets <Item, Mopped> ({ buckets, reducer, initial, mopKey }: {
   buckets: Buckets<Item>
-  mopCallback: ({ bucket, mopKey }: { bucket: Item[], mopKey?: keyof Item }) => Mopped
-  mopKey?: keyof Item
-}): Record<string, Mopped> {
-  const entries = Object.entries(buckets)
+  reducer: Mopper<Item, Mopped>
+  mopKey: keyof Item
+  initial: Mopped
+}): MoppedBuckets<Mopped> {
+  const mopped: MoppedBuckets<Mopped> = {}
+  Object.entries(buckets).forEach(([bucketKey, bucketOrBuckets]) => {
+    if (Array.isArray(bucketOrBuckets)) {
+      const moppedBucket = mopBucket({ bucket: bucketOrBuckets, mopper: reducer, mopKey, initial })
 
-  const mopped = entries.reduce((mopped, [bucketKey, bucket]) => {
-    const moppedValue = mopCallback({ bucket, mopKey })
-    mopped[bucketKey] = moppedValue
+      mopped[bucketKey] = moppedBucket
+    } else {
+      const moppedBuckets = mopBuckets({ buckets: bucketOrBuckets, reducer, initial, mopKey })
 
-    return mopped
-  }, {})
+      mopped[bucketKey] = moppedBuckets
+    }
+  })
 
   return mopped
 }
 
-function totalMop2 <Item> ({ totalKey, buckets }: {
-  totalKey: string
-  buckets: Record<string, Item[]>
-}): Record<string, number> {
-  return mop({ buckets, mopCallback: totalBucket, mopKey: totalKey })
-}
-
-const totaled = totalMop({ totalKey: 'a', buckets })
-console.log('totaled test:', totaled)
-
-function bucketMop <Item, Schema> ({ buckets }: {
-  buckets: string[]
-}): Buckets<Item> {
-  const bucketed = buckets.reduce<Record<string, Item[]>>((bucketed, bucketKey) => {
-  const schemaEntries = Object.entries(schema)
-  const result = schemaEntries.reduce((result, [schemaKey, schemaValue]) => {
-    if (typeof schemaValue === 'string') {
-      switch (schemaValue) {
-        case 'items': {
-          return data
-        }
-        case 'total': {
-        }
-    }
-}
-*/
+const bucketTotals = mopBuckets({ buckets: itemBuckets, reducer: totalReducer, mopKey: 'price', initial: 0 })
+console.log('bucketTotals test:', bucketTotals)
