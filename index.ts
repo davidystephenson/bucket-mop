@@ -82,14 +82,14 @@ console.log('amsterdamEmail test:', amsterdamEmail)
 type Mopper <Item, Mopped> = ({ bucket, mopKey }: {
   mopped: Mopped
   item: Item
-  mopKey?: keyof Item
+  mopKey: keyof Item
   bucket: Item[]
 }) => Mopped
 
 function totalMopper <Item> ({ mopped, item, mopKey }: {
   mopped: number
   item: Item
-  mopKey?: keyof Item
+  mopKey: keyof Item
 }): number {
   if (mopKey == null) throw new Error('totalReducer requires a mopKey')
 
@@ -102,10 +102,10 @@ function totalMopper <Item> ({ mopped, item, mopKey }: {
 function averageReducer <Item> ({ mopped, item, mopKey, bucket }: {
   mopped: number
   item: Item
-  mopKey?: keyof Item
+  mopKey: keyof Item
   bucket: Item[]
 }): number {
-  if (mopKey == null) throw new Error('totalReducer requires a mopKey')
+  if (mopKey == null) throw new Error('averageReducer requires a mopKey')
 
   const value = item[mopKey]
   const number = Number(value)
@@ -118,7 +118,7 @@ function mopBucket <Item, Mopped> ({ bucket, mopper, mopKey, initial }: {
   bucket: Item[]
   mopper: Mopper<Item, Mopped>
   initial: Mopped
-  mopKey?: keyof Item
+  mopKey: keyof Item
 }): Mopped {
   const mopped = bucket.reduce((mopped, item) => {
     const reduced = mopper({ mopped, item, mopKey, bucket })

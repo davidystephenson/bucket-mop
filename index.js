@@ -61,7 +61,7 @@ function totalMopper({ mopped, item, mopKey }) {
 }
 function averageReducer({ mopped, item, mopKey, bucket }) {
     if (mopKey == null)
-        throw new Error('totalReducer requires a mopKey');
+        throw new Error('averageReducer requires a mopKey');
     const value = item[mopKey];
     const number = Number(value);
     const quotient = number / bucket.length;
