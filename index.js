@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const items_json_1 = __importDefault(require("./items.json"));
-console.log('items test:', items_json_1.default);
 function addBucket({ buckets, path, item }) {
     const limit = path.length - 1;
     path.reduce((adding, part, index) => {
@@ -53,15 +52,11 @@ function getBucket({ buckets, path }) {
 const amsterdamEmail = getBucket({ buckets: citySourceBuckets, path: ['Amsterdam', 'email'] });
 console.log('amsterdamEmail test:', amsterdamEmail);
 function totalMopper({ mopped, item, mopKey }) {
-    if (mopKey == null)
-        throw new Error('totalReducer requires a mopKey');
     const value = item[mopKey];
     const number = Number(value);
     return mopped + number;
 }
-function averageReducer({ mopped, item, mopKey, bucket }) {
-    if (mopKey == null)
-        throw new Error('averageReducer requires a mopKey');
+function averageMopper({ mopped, item, mopKey, bucket }) {
     const value = item[mopKey];
     const number = Number(value);
     const quotient = number / bucket.length;
@@ -95,18 +90,39 @@ function mopBuckets({ buckets, mopper, initial, mopKey }) {
 }
 const citySourcePriceTotals = mopBuckets({ buckets: citySourceBuckets, mopper: totalMopper, mopKey: 'price', initial: 0 });
 console.log('citySourcePriceTotals test:', citySourcePriceTotals);
-function bucketMop({ items, bucketPath, reducer, initial, mopKey }) {
+function bucketMop({ items, bucketPath, mopper, initial, mopKey }) {
     const buckets = bucket({ items, path: bucketPath });
-    console.log('buckets test:', JSON.stringify(buckets, null, 2));
-    return mopBuckets({ buckets, mopper: reducer, initial, mopKey });
+    return mopBuckets({ buckets, mopper: mopper, initial, mopKey });
 }
-function bucketMopTotal({ items, bucketPath, totalKey }) {
-    return bucketMop({ items, bucketPath, reducer: totalMopper, initial: 0, mopKey: totalKey });
+function bucketMopTotal({ items, bucketPath, mopKey }) {
+    return bucketMop({ items, bucketPath, mopper: totalMopper, initial: 0, mopKey });
 }
-const quantityTotals = bucketMop({ items: items_json_1.default, bucketPath: ['source', 'city', 'price'], reducer: totalMopper, initial: 0, mopKey: 'quantity' });
+function bucketMopAverage({ items, bucketPath, mopKey }) {
+    return bucketMop({ items, bucketPath, mopper: averageMopper, initial: 0, mopKey });
+}
+const quantityTotals = bucketMop({ items: items_json_1.default, bucketPath: ['source', 'city', 'price'], mopper: totalMopper, initial: 0, mopKey: 'quantity' });
 console.log('quantityTotals test:', quantityTotals);
-const cityTotals = bucketMopTotal({ items: items_json_1.default, bucketPath: ['price', 'city'], totalKey: 'quantity' });
+const cityTotals = bucketMopTotal({ items: items_json_1.default, bucketPath: ['price', 'city'], mopKey: 'quantity' });
 console.log('cityTotals test:', cityTotals);
-const cityAverages = bucketMop({ items: items_json_1.default, bucketPath: ['price', 'city'], reducer: averageReducer, initial: 0, mopKey: 'quantity' });
+const cityAverages = bucketMop({ items: items_json_1.default, bucketPath: ['price', 'city'], mopper: averageMopper, initial: 0, mopKey: 'quantity' });
 console.log('cityAverages test:', cityAverages);
+const priceAverages = bucketMopAverage({ items: items_json_1.default, bucketPath: ['city', 'price'], mopKey: 'quantity' });
+console.log('priceAverages test:', priceAverages);
+function countMopper({ bucket }) {
+    return bucket.length;
+}
+function bucketMopCount({ items, bucketPath, mopKey }) {
+    return bucketMop({ items, bucketPath, mopper: countMopper, initial: 0, mopKey });
+}
+const cityCounts = bucketMopCount({ items: items_json_1.default, bucketPath: ['price', 'city'], mopKey: 'quantity' });
+console.log('cityCounts test:', cityCounts);
+function bucketMopFactory({ mopper, initial }) {
+    function factorized({ items, bucketPath, mopKey }) {
+        return bucketMop({ items, bucketPath, mopper, initial, mopKey });
+    }
+    return factorized;
+}
+const c = bucketMopFactory({ mopper: countMopper, initial: 0 });
+const d = c({ items: items_json_1.default, bucketPath: ['price', 'city'], mopKey: 'quantity' });
+console.log('d test:', d);
 //# sourceMappingURL=index.js.map
