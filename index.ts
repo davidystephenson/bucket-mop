@@ -1,30 +1,28 @@
-import items from './items.json'
+export type BucketOrBuckets <Item> = Buckets<Item> | Item[]
 
-type BucketOrBuckets <Item> = Buckets<Item> | Item[]
-
-interface Buckets <Item> {
+export interface Buckets <Item> {
   [key: string]: BucketOrBuckets<Item>
 }
 
-type MoppedBucketOrBuckets <Mopped> = MoppedBuckets<Mopped> | Mopped
-interface MoppedBuckets <Mopped> {
+export type MoppedBucketOrBuckets <Mopped> = MoppedBuckets<Mopped> | Mopped
+export interface MoppedBuckets <Mopped> {
   [key: string]: MoppedBucketOrBuckets<Mopped>
 }
 
-type Mopper <Mopped> = <Item> ({ mopped, item, mopKey, bucket }: {
+export type Mopper <Mopped> = <Item> ({ mopped, item, mopKey, bucket }: {
   mopped: Mopped
   item: Item
   mopKey: keyof Item
   bucket: Item[]
 }) => Mopped
 
-type BucketMopper <Mopped> = <Item> ({ items, bucketPath, mopKey }: {
+export type BucketMopper <Mopped> = <Item> ({ items, bucketPath, mopKey }: {
   items: Item[]
   bucketPath: Array<keyof Item>
   mopKey: keyof Item
 }) => MoppedBuckets<Mopped>
 
-function addBucket <Item> ({ buckets, path, item }: {
+export function addBucket <Item> ({ buckets, path, item }: {
   buckets: Buckets<Item>
   path: string[]
   item: Item
@@ -55,11 +53,11 @@ function addBucket <Item> ({ buckets, path, item }: {
   return buckets
 }
 
-function bucket <Item> ({ items, path }: {
+export function bucketsFactory <Item> ({ items, path }: {
   items: Item[]
   path: Array<keyof Item>
 }): Buckets<Item> {
-  const emptyBuckets = items.reduce<Buckets<Item>>((buckets, item) => {
+  const buckets = items.reduce<Buckets<Item>>((buckets, item) => {
     const bucketValues = path.map(key => String(item[key]))
 
     const added = addBucket({ buckets, path: bucketValues, item })
@@ -67,13 +65,10 @@ function bucket <Item> ({ items, path }: {
     return added
   }, {})
 
-  return emptyBuckets
+  return buckets
 }
 
-const citySourceBuckets = bucket({ items, path: ['city', 'source'] })
-console.log('citySourceBuckets:', JSON.stringify(citySourceBuckets, null, 2))
-
-function getBucket <Item> ({ buckets, path }: {
+export function getBucket <Item> ({ buckets, path }: {
   buckets: Buckets<Item>
   path: string[]
 }): Item[] {
@@ -88,10 +83,8 @@ function getBucket <Item> ({ buckets, path }: {
 
   throw new Error('Bucket path not found')
 }
-const amsterdamEmail = getBucket({ buckets: citySourceBuckets, path: ['Amsterdam', 'email'] })
-console.log('amsterdamEmail test:', amsterdamEmail)
 
-function totalMopper <Item> ({ mopped, item, mopKey }: {
+export function totalMopper <Item> ({ mopped, item, mopKey }: {
   mopped: number
   item: Item
   mopKey: keyof Item
@@ -102,7 +95,7 @@ function totalMopper <Item> ({ mopped, item, mopKey }: {
   return mopped + number
 }
 
-function averageMopper <Item> ({ mopped, item, mopKey, bucket }: {
+export function averageMopper <Item> ({ mopped, item, mopKey, bucket }: {
   mopped: number
   item: Item
   mopKey: keyof Item
@@ -115,7 +108,7 @@ function averageMopper <Item> ({ mopped, item, mopKey, bucket }: {
   return mopped + quotient
 }
 
-function mopBucket <Item, Mopped> ({ bucket, mopper, mopKey, initial }: {
+export function mopBucket <Item, Mopped> ({ bucket, mopper, mopKey, initial }: {
   bucket: Item[]
   mopper: Mopper<Mopped>
   initial: Mopped
@@ -130,17 +123,14 @@ function mopBucket <Item, Mopped> ({ bucket, mopper, mopKey, initial }: {
   return mopped
 }
 
-function mopTotal <Item> ({ bucket, totalKey }: {
+export function mopTotal <Item> ({ bucket, mopKey }: {
   bucket: Item[]
-  totalKey: keyof Item
+  mopKey: keyof Item
 }): number {
-  return mopBucket({ bucket, mopper: totalMopper, mopKey: totalKey, initial: 0 })
+  return mopBucket({ bucket, mopper: totalMopper, mopKey, initial: 0 })
 }
 
-const totalEmailPrice = mopTotal({ bucket: amsterdamEmail, totalKey: 'price' })
-console.log('totalEmailPrice test:', totalEmailPrice)
-
-function mopBuckets <Item, Mopped> ({ buckets, mopper, initial, mopKey }: {
+export function mopBuckets <Item, Mopped> ({ buckets, mopper, initial, mopKey }: {
   buckets: Buckets<Item>
   mopper: Mopper<Mopped>
   mopKey: keyof Item
@@ -162,22 +152,19 @@ function mopBuckets <Item, Mopped> ({ buckets, mopper, initial, mopKey }: {
   return mopped
 }
 
-const citySourcePriceTotals = mopBuckets({ buckets: citySourceBuckets, mopper: totalMopper, mopKey: 'price', initial: 0 })
-console.log('citySourcePriceTotals test:', citySourcePriceTotals)
-
-function bucketMop <Item, Mopped> ({ items, bucketPath, mopper, initial, mopKey }: {
+export function bucketMop <Item, Mopped> ({ items, bucketPath, mopper, initial, mopKey }: {
   items: Item[]
   bucketPath: Array<keyof Item>
   mopper: Mopper<Mopped>
   initial: Mopped
   mopKey: keyof Item
 }): MoppedBuckets<Mopped> {
-  const buckets = bucket({ items, path: bucketPath })
+  const buckets = bucketsFactory({ items, path: bucketPath })
 
   return mopBuckets({ buckets, mopper: mopper, initial, mopKey })
 }
 
-function bucketMopTotal <Item> ({ items, bucketPath, mopKey }: {
+export function bucketMopTotal <Item> ({ items, bucketPath, mopKey }: {
   items: Item[]
   bucketPath: Array<keyof Item>
   mopKey: keyof Item
@@ -185,7 +172,7 @@ function bucketMopTotal <Item> ({ items, bucketPath, mopKey }: {
   return bucketMop({ items, bucketPath, mopper: totalMopper, initial: 0, mopKey })
 }
 
-function bucketMopAverage <Item> ({ items, bucketPath, mopKey }: {
+export function bucketMopAverage <Item> ({ items, bucketPath, mopKey }: {
   items: Item[]
   bucketPath: Array<keyof Item>
   mopKey: keyof Item
@@ -193,25 +180,13 @@ function bucketMopAverage <Item> ({ items, bucketPath, mopKey }: {
   return bucketMop({ items, bucketPath, mopper: averageMopper, initial: 0, mopKey })
 }
 
-const quantityTotals = bucketMop({ items, bucketPath: ['source', 'city', 'price'], mopper: totalMopper, initial: 0, mopKey: 'quantity' })
-console.log('quantityTotals test:', quantityTotals)
-
-const cityTotals = bucketMopTotal({ items, bucketPath: ['price', 'city'], mopKey: 'quantity' })
-console.log('cityTotals test:', cityTotals)
-
-const cityAverages = bucketMop({ items, bucketPath: ['price', 'city'], mopper: averageMopper, initial: 0, mopKey: 'quantity' })
-console.log('cityAverages test:', cityAverages)
-
-const priceAverages = bucketMopAverage({ items, bucketPath: ['city', 'price'], mopKey: 'quantity' })
-console.log('priceAverages test:', priceAverages)
-
-function countMopper <Item> ({ bucket }: {
+export function countMopper <Item> ({ bucket }: {
   bucket: Item[]
 }): number {
   return bucket.length
 }
 
-function bucketMopCount <Item> ({ items, bucketPath, mopKey }: {
+export function bucketMopCount <Item> ({ items, bucketPath, mopKey }: {
   items: Item[]
   bucketPath: Array<keyof Item>
   mopKey: keyof Item
@@ -219,14 +194,11 @@ function bucketMopCount <Item> ({ items, bucketPath, mopKey }: {
   return bucketMop({ items, bucketPath, mopper: countMopper, initial: 0, mopKey })
 }
 
-const cityCounts = bucketMopCount({ items, bucketPath: ['price', 'city'], mopKey: 'quantity' })
-console.log('cityCounts test:', cityCounts)
-
-function bucketMopFactory <Mopped> ({ mopper, initial }: {
+export function bucketMopFactory <Mopped> ({ mopper, initial }: {
   mopper: Mopper<Mopped>
   initial: Mopped
 }): BucketMopper<Mopped> {
-  function factorized <Item> ({ items, bucketPath, mopKey }: {
+  function product <Item> ({ items, bucketPath, mopKey }: {
     items: Item[]
     bucketPath: Array<keyof Item>
     mopKey: keyof Item
@@ -234,9 +206,7 @@ function bucketMopFactory <Mopped> ({ mopper, initial }: {
     return bucketMop({ items, bucketPath, mopper, initial, mopKey })
   }
 
-  return factorized
+  return product
 }
 
-const c = bucketMopFactory({ mopper: countMopper, initial: 0 })
-const d = c({ items, bucketPath: ['price', 'city'], mopKey: 'quantity' })
-console.log('d test:', d)
+export default bucketMop
